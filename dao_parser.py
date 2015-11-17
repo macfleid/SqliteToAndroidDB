@@ -2,7 +2,13 @@
 import datetime
 
 now = datetime.datetime.now()
-f = open('create.sql','r')
+f = open('create.sql', 'r')
+
+'''
+TODO LIST :
+- handle nullable column
+- clear package not used
+'''
 
 ##-----------------------------------------------
 ##  PACKAGES LIST
@@ -53,23 +59,25 @@ def parseCreateDB(line):
 ##-------------------------------------------------               
 def parseCreateDBCOlumns(line):
         index = str(line).find('  "')
-        if index!=-1:
+        if index != -1:
                 newcolumn = str(line).split('"',2)
                 foundType = False
                 columnType = 'Object'
-                types = ['INTEGER','VARCHAR','BIT','FLOAT', 'DATETIME', 'BLOB']
+                nullable = not("NOT NULL" in line);
+                autoIncrement = "AUTOINCREMENT" in line;
+                types = ['INTEGER', 'VARCHAR', 'BIT', 'FLOAT', 'DATETIME', 'BLOB', 'TEXT']
                 i = 0
                 while ((not foundType) and i<(len(types))):
                         type_ = str(line).find(types[i]),
                         print('      ...#Line :'+str(line)),
-                        if type_[0] != -1 :
+                        if type_[0] != -1:
                              foundType = True
                              print('      ...#type detected:'+str(type_))
                         if not foundType:
-                                i=i+1
+                                i += 1
                 print('      ...type detected:'+types[i])
                 if foundType:
-                        if i==0:
+                        if i == 0:
                                 columnType = 'int'
                         elif i==1:
                                 columnType = 'String'
@@ -81,8 +89,10 @@ def parseCreateDBCOlumns(line):
                                 columnType = 'Date'
                         elif i==5:
                                 columnType = 'byte[]'
-                print('      ...new Column found :: '+newcolumn[1]+' type :'+columnType)
-                columnList.append((tableList[len(tableList)-1],newcolumn[1],columnType))
+                        elif i==6:
+                                columnType = 'String'
+                print('      ...new Column found :: '+newcolumn[1]+' type :'+columnType+' Nullable :'+str(nullable))
+                columnList.append((tableList[len(tableList)-1], newcolumn[1], columnType, nullable, autoIncrement))
 
 
        
@@ -223,9 +233,9 @@ def createDalWrapper(tablename):
         print('      ...creating DALWRAPPER FOR TABLE :'+tablename)
         pattern = ''
         pattern += 'package '+basePackageName+dalWrapper+';\n\n'
-        pattern += 'import android.content.ContentValues;'
+        pattern += 'import android.content.ContentValues;\n'
         pattern += 'import java.io.Serializable;\n'
-        pattern += 'import '+basePackageName+'.sqlite.utils.DateGetter;'
+        pattern += 'import '+basePackageName+'.sqlite.utils.DateGetter;\n'
         pattern += 'import '+basePackageName+dal+'.'+tablename+';\n'
         pattern += 'import '+basePackageName+cursor+'.'+tablename+'Cursor;\n'
         pattern += 'import java.util.Date;\n'
@@ -233,6 +243,10 @@ def createDalWrapper(tablename):
         pattern += ''
         pattern += ''
         pattern += ''
+        pattern += "/*\n"
+        pattern += "* AUTO GENERATED FILE \n"
+        pattern += "* creation date : "+now.strftime("%Y-%m-%d %H:%M")+" \n"
+        pattern += "*/\n"
         pattern += 'public class '+tablename+'DalWrapper {\n'
         pattern += '\n'
         pattern += '    public static '+tablename+' getObjectFromDB('+tablename+'Cursor cursor, int start) { \n'
@@ -269,13 +283,13 @@ def createDalWrapper(tablename):
         pattern += "        "+tablename+" object_ = ("+tablename+") object;\n"
         pattern += "        ContentValues values = new ContentValues();\n"
         for column in columnList:
-                if column[0]==tablename:
-                        if column[2]=='Date':
+                if column[0] == tablename:
+                        if column[2] == 'Date':
                                 pattern += "        String dateString = DateGetter.getInstance().getStringFromDate("
                                 pattern += "object_.get"+column[1]+"()"
                                 pattern += ");\n"
                                 pattern += "        values.put("+tablename+".COLUMN_"+column[1].upper()+",dateString);\n"
-                        else:
+                        elif column[2] != 'Date' and not(column[4]):
                                 pattern += "        values.put("+tablename+".COLUMN_"+column[1].upper()+","
                                 pattern += "object_.get"+column[1]+"()"
                                 pattern += ");\n"
@@ -299,7 +313,6 @@ def createDAO(tablename):
         print('      ...creating DAO FOR TABLE :'+tablename)
         pattern = 'package '+basePackageName+daoExtended+';\n\n'
         pattern += 'import android.content.Context;\n'
-        pattern += 'import com.kayentis.epro.sqlite.utils.KLog;'
         pattern += 'import '+basePackageName+dalWrapper+'.'+tablename+'DalWrapper;\n\n'
         pattern += 'import android.database.Cursor;\n'
         pattern += 'import android.net.Uri;\n'
@@ -313,7 +326,6 @@ def createDAO(tablename):
         pattern += '    private final static String TAG = '+tablename+'DAO.class.getName();\n\n'
         pattern += '    public '+tablename+'DAO(Context c) {\n'
         pattern += '        super(c, '+tablename+'ContentProvider.CONTENT_URI);\n'
-        pattern += '        KLog.d(c,TAG, "#'+tablename+'DAO");'
         pattern += '    }\n\n'
         pattern += ''
         pattern += '    @Override\n'
