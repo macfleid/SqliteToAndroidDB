@@ -4,11 +4,6 @@ import datetime
 now = datetime.datetime.now()
 f = open('create.sql', 'r')
 
-'''
-TODO LIST :
-- handle nullable column
-- clear package not used
-'''
 
 ##-----------------------------------------------
 ##  PACKAGES LIST
