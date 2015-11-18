@@ -1,10 +1,9 @@
 ﻿import os
 import datetime
 import shutil
+import argparse
 
 now = datetime.datetime.now()
-f = open('create.sql', 'r')
-
 
 ##-----------------------------------------------
 ##  PACKAGES LIST
@@ -447,18 +446,18 @@ def createDAOFILE():
         createManifest()
 
 ##---------------------------------------------------------------------------------------------
-        
 ## EXECUTION PART
 ##*****************************
-if __name__ == "__main__":
+def execute(oldfile,newCreateFile):
+
 
     shutil.rmtree(baseFileDIR, True)
-    newCreateFile = "create_new.sql";
-    if os.path.exists(newCreateFile):
-        getNewAndUpdatedTables("create.sql", newCreateFile)
+    if oldfile and os.path.exists(oldfile):
+        getNewAndUpdatedTables(oldfile, newCreateFile)
     else:
+        f = open(newCreateFile, 'r')
         for line in f:
-                parseCreateDB(line)
+            parseCreateDB(line)
 
     print('   ...creating directories:')
     filesToCreate = [baseFileDIR, ProviderFilesDIR, DalFilesDir, DalWrapperFileDir, CursorFileDir, DaoExtendFileDir, DaoFileDir, DaoInterfacesFileDir]
@@ -475,3 +474,22 @@ if __name__ == "__main__":
     print(str(len(tableList))+' table(s) have been parsed.')
 
     os.system("pause")
+
+
+##---------------------------------------------------------------------------------------------
+## Args parse
+##*****************************
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="SQliteDb create sql file to android code DAL/DAO")
+    parser.add_argument('-f', type=str, dest='file', help='SQL file to parse')
+    parser.add_argument('-o', type=str, dest='oldfile', help='SQL old file to parse')
+    options = parser.parse_args()
+    print(options)
+    if not options.file:
+        parser.print_help()
+    else:
+        if not options.oldfile:
+            execute(None, options.file)
+        else:
+            execute(options.oldfile, options.file)
