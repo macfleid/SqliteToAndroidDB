@@ -1,5 +1,6 @@
 ﻿import os
 import datetime
+import shutil
 
 now = datetime.datetime.now()
 f = open('create.sql', 'r')
@@ -34,28 +35,58 @@ tableList = []
 columnList = []
 
 
+##---------------------------------------------------------------------------------------------
+##Parse the lines of the sql file - adds the table names
+##Only new table and table with updated columns are added
+##-------------------------------------------------
+def getNewAndUpdatedTables(oldFile, newFile):
+    oldFile_ = open(oldFile, 'r')
+    newFile_ = open(newFile, 'r')
+    oldFileTableList = []
+    oldColumnList = []
+
+    for line in oldFile_:
+        parseCreateDB(line)
+    oldFileTableList = list(tableList)
+    oldColumnList = list(columnList)
+
+    tableList.clear()
+    columnList.clear()
+    for line in newFile_:
+        parseCreateDB(line)
+
+    newTablesList = set(tableList) - set(oldFileTableList)
+    print(newTablesList)
+
+    updatedColumns = (set(columnList) - set(oldColumnList)) | (set(oldColumnList) - set(columnList))
+    for col in updatedColumns:
+        if col[0] not in newTablesList:
+            newTablesList.add(col[0])
+    tableList.clear()
+    tableList.extend(newTablesList)
+    print(newTablesList)
 
 
 ##---------------------------------------------------------------------------------------------
 ##Parse the lines of the sql file - adds the table names
 ##-------------------------------------------------
 def parseCreateDB(line):
-        index = str(line).find('CREATE TABLE')
-        if index != -1:
-                print('   ...new table found')
-                index_ = str(line).index('"')
-                newtable = str(line).split('"',2)
-                tableList.append(newtable[1])
-                print(newtable[1])
-        else:
-                parseCreateDBCOlumns(line)
+    index = str(line).find('CREATE TABLE')
+    if index != -1:
+            print('   ...new table found')
+            index_ = str(line).index('"')
+            newtable = str(line).split('"',2)
+            tableList.append(newtable[1])
+            print(newtable[1])
+    else:
+            parseCreateDBCOlumns(line)
                 
 ##Parse the lines for columns detect with type
 ##-------------------------------------------------               
 def parseCreateDBCOlumns(line):
         index = str(line).find('  "')
         if index != -1:
-                newcolumn = str(line).split('"',2)
+                newcolumn = str(line).split('"', 2)
                 foundType = False
                 columnType = 'Object'
                 nullable = not("NOT NULL" in line);
@@ -417,40 +448,30 @@ def createDAOFILE():
 
 ##---------------------------------------------------------------------------------------------
         
-
 ## EXECUTION PART
 ##*****************************
-for line in f:
-        parseCreateDB(line)
+if __name__ == "__main__":
 
+    shutil.rmtree(baseFileDIR, True)
+    newCreateFile = "create_new.sql";
+    if os.path.exists(newCreateFile):
+        getNewAndUpdatedTables("create.sql", newCreateFile)
+    else:
+        for line in f:
+                parseCreateDB(line)
 
-print('------------------------------')
-print('...CREATING DAO FILES ')
-print('------------------------------')
+    print('   ...creating directories:')
+    filesToCreate = [baseFileDIR, ProviderFilesDIR, DalFilesDir, DalWrapperFileDir, CursorFileDir, DaoExtendFileDir, DaoFileDir, DaoInterfacesFileDir]
+    for file in filesToCreate:
+        if not os.path.exists(file):
+            os.makedirs(file)
 
-print('   ...creating directories:')
-if not os.path.exists(baseFileDIR):
-        os.makedirs(baseFileDIR)
-if not os.path.exists(ProviderFilesDIR):
-        os.makedirs(ProviderFilesDIR)
-if not os.path.exists(DalFilesDir):
-        os.makedirs(DalFilesDir)
-if not os.path.exists(DalWrapperFileDir):
-        os.makedirs(DalWrapperFileDir)
-if not os.path.exists(CursorFileDir):
-        os.makedirs(CursorFileDir)
-if not os.path.exists(DaoExtendFileDir):
-        os.makedirs(DaoExtendFileDir)
-if not os.path.exists(DaoFileDir):
-        os.makedirs(DaoFileDir)
-if not os.path.exists(DaoInterfacesFileDir):
-        os.makedirs(DaoInterfacesFileDir)
+    print('------------------------------')
+    print('...CREATING DAO FILES ')
+    print('------------------------------')
+    createDAOFILE()
 
-        
-createDAOFILE()
-        
+    print('#File creation ended successfully : ')
+    print(str(len(tableList))+' table(s) have been parsed.')
 
-print('#File creation ended successfully : ')
-print(str(len(tableList))+' table(s) have been parsed.')
-        
-os.system("pause")
+    os.system("pause")
