@@ -1,4 +1,4 @@
-﻿import os
+import os
 import datetime
 import shutil
 import argparse
@@ -8,7 +8,7 @@ now = datetime.datetime.now()
 ##-----------------------------------------------
 ##  PACKAGES LIST
 ##-----------------------------------------------
-basePackageName = 'com.kayentis.epro'
+basePackageName = 'com.mcfly.pyl'
 
 sqliteManager = '.sqlite.manager'
 contentprovider = '.sqlite.contentprovider'
@@ -20,7 +20,7 @@ dalWrapper = '.sqlite.dal.wrapper'
 cursor = '.sqlite.cursor'
 
 ##-----------------------------------------------
-baseFileDIR = './com/kayentis/epro/sqlite'
+baseFileDIR = './com/mcfly/pyl/sqlite'
 
 ProviderFilesDIR = baseFileDIR+'/contentprovider'
 DalFilesDir = baseFileDIR+'/dal'
@@ -146,7 +146,7 @@ def createProvider(tablename):
         pattern += '    private DbManager dbManager;\n'
         pattern += '    private static final String BASE_PATH = "'+tablename+'";\n'
         pattern += '\n'
-        pattern += '    public static final String AUTHORITY = "com.kayentis.epro.sqlite.contentprovider.'+tablename+'ContentProvider";\n'
+        pattern += '    public static final String AUTHORITY = "'+basePackageName+contentprovider+"."+tablename+'ContentProvider";\n'
         pattern += '    public static final Uri CONTENT_URI = Uri.parse("content://" +AUTHORITY+ "/" + BASE_PATH);\n'
         pattern += '    public static final String TYPE = "'+tablename+'";\n'
         pattern += '\n'
@@ -279,6 +279,8 @@ def createDalWrapper(tablename):
         i_ =0 
         for column in columnList:
                 if column[0]==tablename:
+                        if column[4]:
+                            pattern += "        if(!cursor.isNull("+str(i_)+"+start)) {\n"
                         type = ""
                         if column[2]== "boolean":
                                 type = "Int"
@@ -298,6 +300,8 @@ def createDalWrapper(tablename):
                                 pattern += "        object_.set"+column[1]+""
                                 pattern += "(cursor.get"+type+"("+str(i_)+"+start));\n"
                         i_+=1
+                        if column[4]:
+                            pattern += "        }\n"
         pattern += "        return object_;\n"
         pattern += '    }\n\n'
         pattern += "    public static int getNbColumns() { \n"
